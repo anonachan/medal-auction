@@ -2,7 +2,6 @@ const { ethers, Signer } = require("ethers");
 require("dotenv").config();
 require("log-timestamp");
 const _ = require("lodash");
-const axios = require("axios");
 
 const { BigNumber } = ethers;
 const { parseEther, formatEther, parseUnits } = ethers.utils;
@@ -20,8 +19,6 @@ CHAIN_ID = 250;
 ADDRESS_TICKET = "0x97DeB227e81533882BeE467f7EE67fDCb8EF2126";
 ADDRESS_AUCTION = "0xD5D5C07CC2A21fce523b8C16B51F769B0aFa08B4";
 PRIVATE_KEY = process.env["PRIVATE_KEY"];
-USER_ADDRESS = process.env["ADDRESS"];
-GAS_ORACLE_API_KEY = process.env["GAS_ORACLE_API_KEY"];
 
 // function signature
 TOKEN_ABI = ["function balanceOf(address owner) view returns (uint256)"];
@@ -99,12 +96,12 @@ const checkIfNoResp = async (exit = false) => {
   }
 };
 
-const start = (lastYs, callCount = 0) => {
+const start = (userAddress, lastYs, callCount = 0) => {
   provider.once("block", async () => {
     // exit the script after 3 minutes no successful response
     checkIfNoResp();
     const y = await auctionContract.getY(X);
-    const balance = await ticketContract.balanceOf(USER_ADDRESS);
+    const balance = await ticketContract.balanceOf(userAddress);
 
     let tx;
     let confirmed = false;
@@ -146,18 +143,18 @@ const start = (lastYs, callCount = 0) => {
         await sleepAndCheckTx(time + 1);
       };
       await sleepAndCheckTx();
-      start(appendToLastNumOfElem(lastYs, y), callCount + 1);
+      start(userAddress, appendToLastNumOfElem(lastYs, y), callCount + 1);
       return;
     }
     // wait for 1 second to trigger the next block
     await sleep(1);
-    start(appendToLastNumOfElem(lastYs, y), callCount + 1);
+    start(userAddress, appendToLastNumOfElem(lastYs, y), callCount + 1);
   });
 };
 (async () => {
   try {
     const y = await auctionContract.getY(X);
-    start([y]);
+    start(wallet.address, [y]);
   } catch (err) {
     console.error(err);
   }
